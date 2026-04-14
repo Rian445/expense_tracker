@@ -1,0 +1,33 @@
+# Root ignore
+Expense Tracker app plan.txt
+.DS_Store
+.vscode/
+
+# Flutter/Dart/Pub related (for the nested project)
+**/build/
+**/.dart_tool/
+**/.flutter-plugins-dependencies
+**/.pub-cache/
+**/.pub/
+**/coverage/
+
+# IntelliJ related
+**/*.iml
+**/*.ipr
+**/*.iws
+**/.idea/
+
+# Android Studio artifacts
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
+
+# iOS related
+**/ios/Flutter/.last_build_id
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+
+# Miscellaneous
+*.log
+*.swp
+.history

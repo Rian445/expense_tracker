@@ -10,6 +10,8 @@ import 'add_expense_screen.dart';
 import '../providers/settings_provider.dart';
 import '../services/export_service.dart';
 import '../providers/expense_provider.dart';
+import '../services/backup_service.dart';
+import '../providers/category_provider.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -60,6 +62,47 @@ class DashboardScreen extends ConsumerWidget {
             _DrawerItem(icon: Icons.history_outlined, label: 'Transaction History', onTap: () {}),
             _DrawerItem(icon: Icons.category_outlined, label: 'Categories', onTap: () {}),
             _DrawerItem(icon: Icons.settings_outlined, label: 'Settings', onTap: () {}),
+            const Divider(height: 32, indent: 20, endIndent: 20),
+            _DrawerItem(
+              icon: Icons.cloud_upload_outlined, 
+              label: 'Backup Data', 
+              onTap: () async {
+                Navigator.pop(context);
+                try {
+                  await BackupService.exportBackup();
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Backup failed: $e'))
+                    );
+                  }
+                }
+              }
+            ),
+            _DrawerItem(
+              icon: Icons.cloud_download_outlined, 
+              label: 'Restore Data', 
+              onTap: () async {
+                Navigator.pop(context);
+                try {
+                  final success = await BackupService.importBackup();
+                  if (success && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Data restored successfully! Refreshing...'))
+                    );
+                    ref.invalidate(expenseProvider);
+                    ref.invalidate(categoryTotalsProvider);
+                    ref.invalidate(categoryProvider);
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Restore failed: $e'))
+                    );
+                  }
+                }
+              }
+            ),
             const Divider(height: 32, indent: 20, endIndent: 20),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),

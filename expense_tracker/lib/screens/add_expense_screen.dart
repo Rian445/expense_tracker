@@ -5,6 +5,9 @@ import '../models/expense.dart';
 import '../providers/expense_provider.dart';
 import '../providers/category_provider.dart';
 import '../core/constants/app_theme.dart';
+import '../providers/theme_provider.dart';
+
+import '../providers/settings_provider.dart';
 
 class AddExpenseScreen extends ConsumerStatefulWidget {
   const AddExpenseScreen({super.key});
@@ -31,13 +34,16 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
   @override
   Widget build(BuildContext context) {
     final categories = ref.watch(categoryProvider);
+    final isDarkMode = ref.watch(themeModeProvider) == ThemeMode.dark;
+    final currency = ref.watch(currencyProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Add Expense'),
         leading: IconButton(
-          icon: const Icon(Icons.close, color: AppColors.textPrimary),
+          icon: Icon(Icons.close, color: isDarkMode ? Colors.white : AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -46,16 +52,26 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('How much?', style: TextStyle(color: AppColors.textSecondary)),
+            Text('How much?', style: TextStyle(color: isDarkMode ? Colors.white70 : AppColors.textSecondary)),
             const SizedBox(height: 8),
             TextField(
               controller: _amountController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
-              decoration: const InputDecoration(
-                prefixText: '\$ ',
+              style: TextStyle(
+                fontSize: 48, 
+                fontWeight: FontWeight.bold,
+                color: isDarkMode ? Colors.white : AppColors.textPrimary,
+              ),
+              decoration: InputDecoration(
+                prefixText: '${currency.symbol} ',
+                prefixStyle: TextStyle(
+                  fontSize: 48, 
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.white : AppColors.textPrimary,
+                ),
                 border: InputBorder.none,
                 hintText: '0.00',
+                hintStyle: TextStyle(color: isDarkMode ? Colors.white24 : Colors.grey.withValues(alpha: 0.3)),
               ),
               autofocus: true,
             ),
@@ -67,6 +83,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                 hint: 'Select or type category',
                 suggestions: categories.keys.toList(),
                 onChanged: (_) => setState(() {}),
+                isDarkMode: isDarkMode,
               ),
             ),
             const SizedBox(height: 24),
@@ -78,6 +95,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                 suggestions: _categoryController.text.isNotEmpty 
                     ? categories[_categoryController.text] ?? [] 
                     : [],
+                isDarkMode: isDarkMode,
               ),
             ),
             const SizedBox(height: 24),
@@ -92,15 +110,18 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                       label: Text(m),
                       selected: isSelected,
                       onSelected: (v) => setState(() => _selectedPaymentMethod = m),
-                      selectedColor: AppColors.primary.withValues(alpha: 0.1),
+                      selectedColor: AppColors.primary.withValues(alpha: 0.2),
+                      backgroundColor: isDarkMode ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.05),
                       labelStyle: TextStyle(
-                        color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                        color: isSelected 
+                            ? AppColors.primary 
+                            : (isDarkMode ? Colors.white60 : AppColors.textSecondary),
                         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                       ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                         side: BorderSide(
-                          color: isSelected ? AppColors.primary : Colors.grey.withValues(alpha: 0.2),
+                          color: isSelected ? AppColors.primary : Colors.grey.withValues(alpha: 0.1),
                         ),
                       ),
                     ),
@@ -123,8 +144,11 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                   if (date != null) setState(() => _selectedDate = date);
                 },
                 leading: const Icon(Icons.calendar_today_outlined, color: AppColors.primary),
-                title: Text(DateFormat('EEEE, MMM dd, yyyy').format(_selectedDate)),
-                trailing: const Icon(Icons.chevron_right),
+                title: Text(
+                  DateFormat('EEEE, MMM dd, yyyy').format(_selectedDate),
+                  style: TextStyle(color: isDarkMode ? Colors.white : AppColors.textPrimary),
+                ),
+                trailing: Icon(Icons.chevron_right, color: isDarkMode ? Colors.white24 : Colors.grey),
               ),
             ),
             const SizedBox(height: 48),
@@ -178,10 +202,15 @@ class _BuildFormSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(label, style: TextStyle(
+          fontWeight: FontWeight.bold, 
+          fontSize: 16,
+          color: isDarkMode ? Colors.white : AppColors.textPrimary,
+        )),
         const SizedBox(height: 12),
         child,
       ],
@@ -194,12 +223,14 @@ class _ModernDropdownField extends StatelessWidget {
   final String hint;
   final List<String> suggestions;
   final ValueChanged<String>? onChanged;
+  final bool isDarkMode;
 
   const _ModernDropdownField({
     required this.controller,
     required this.hint,
     required this.suggestions,
     this.onChanged,
+    required this.isDarkMode,
   });
 
   @override
@@ -207,7 +238,7 @@ class _ModernDropdownField extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: isDarkMode ? Colors.white.withValues(alpha: 0.05) : AppColors.background,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Autocomplete<String>(
@@ -230,10 +261,11 @@ class _ModernDropdownField extends StatelessWidget {
               controller.text = v;
               if (onChanged != null) onChanged!(v);
             },
+            style: TextStyle(color: isDarkMode ? Colors.white : AppColors.textPrimary),
             decoration: InputDecoration(
               hintText: hint,
               border: InputBorder.none,
-              hintStyle: const TextStyle(color: Colors.grey),
+              hintStyle: TextStyle(color: isDarkMode ? Colors.white24 : Colors.grey),
             ),
           );
         },

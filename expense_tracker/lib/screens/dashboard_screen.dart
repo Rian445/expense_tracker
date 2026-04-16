@@ -200,6 +200,8 @@ class DashboardScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _BalanceCard(currentSpending: currentSpending),
+                  const SizedBox(height: 24),
+                  const _TimeframeSelector(),
                   const SizedBox(height: 32),
                   const _SectionHeader(title: 'Analytics'),
                   const SizedBox(height: 16),
@@ -654,90 +656,145 @@ class _SectionHeader extends ConsumerWidget {
   }
 }
 
-class _AnalyticsCard extends StatelessWidget {
+class _AnalyticsCard extends ConsumerWidget {
   final Map<String, double> categoryData;
   const _AnalyticsCard({required this.categoryData});
 
   @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            SizedBox(
-              height: 180,
-              child: categoryData.isEmpty 
-                ? Center(child: Text('No data recorded yet', style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color)))
-                : PieChart(
-                    PieChartData(
-                      sectionsSpace: 4,
-                      centerSpaceRadius: 40,
-                      sections: categoryData.entries.map((e) {
-                        final index = categoryData.keys.toList().indexOf(e.key);
-                        return PieChartSectionData(
-                          value: e.value,
-                          title: '',
-                          radius: 50,
-                          color: Colors.primaries[index % Colors.primaries.length],
-                        );
-                      }).toList(),
-                    ),
-                  ),
-            ),
-            if (categoryData.isNotEmpty) ...[
-              const SizedBox(height: 24),
-              Wrap(
-                spacing: 16,
-                runSpacing: 8,
-                children: categoryData.entries.map((e) {
-                  final index = categoryData.keys.toList().indexOf(e.key);
-                  return _CategoryIndicator(
-                    color: Colors.primaries[index % Colors.primaries.length],
-                    text: e.key,
-                  );
-                }).toList(),
-              ),
-            ],
-          ],
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (categoryData.isEmpty) {
+      final isDarkMode = ref.watch(themeModeProvider) == ThemeMode.dark;
+      return Container(
+        height: 160,
+        decoration: BoxDecoration(
+          color: isDarkMode ? const Color(0xFF1E293B) : AppColors.background,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: isDarkMode ? Colors.white12 : Colors.grey.withValues(alpha: 0.1)),
         ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.pie_chart_outline, size: 48, color: isDarkMode ? Colors.white24 : Colors.grey.shade300),
+              const SizedBox(height: 16),
+              const Text('No data for this period', style: TextStyle(color: AppColors.textSecondary)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final total = categoryData.values.fold(0.0, (sum, val) => sum + val);
+    final sortedData = categoryData.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final currency = ref.watch(currencyProvider);
+    final isDarkMode = ref.watch(themeModeProvider) == ThemeMode.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(color: isDarkMode ? Colors.white12 : Colors.grey.withValues(alpha: 0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.02),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          )
+        ],
+      ),
+      child: Column(
+        children: [
+          SizedBox(
+            height: 200,
+            child: Stack(
+              children: [
+                PieChart(
+                  PieChartData(
+                    sectionsSpace: 2,
+                    centerSpaceRadius: 65,
+                    startDegreeOffset: -90,
+                    sections: sortedData.map((e) {
+                      final index = categoryData.keys.toList().indexOf(e.key);
+                      final percentage = (e.value / total) * 100;
+                      return PieChartSectionData(
+                        color: Colors.primaries[index % Colors.primaries.length],
+                        value: e.value,
+                        title: '${percentage.toStringAsFixed(0)}%',
+                        radius: 25,
+                        titleStyle: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Total', style: TextStyle(color: isDarkMode ? Colors.white54 : AppColors.textSecondary, fontSize: 13)),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${currency.symbol}${total.toStringAsFixed(0)}',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: isDarkMode ? Colors.white : AppColors.textPrimary),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Column(
+            children: sortedData.take(4).map((e) {
+              final index = categoryData.keys.toList().indexOf(e.key);
+              final color = Colors.primaries[index % Colors.primaries.length];
+              final percentage = (e.value / total) * 100;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  children: [
+                    Container(width: 12, height: 12, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        e.key,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: isDarkMode ? Colors.white70 : AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${currency.symbol}${e.value.toStringAsFixed(0)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? Colors.white : AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 45,
+                      child: Text(
+                        '${percentage.toStringAsFixed(1)}%',
+                        textAlign: TextAlign.right,
+                        style: TextStyle(color: isDarkMode ? Colors.white54 : AppColors.textSecondary, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _CategoryIndicator extends StatelessWidget {
-  final Color color;
-  final String text;
-
-  const _CategoryIndicator({required this.color, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          text,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).textTheme.bodyMedium?.color,
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 class _ActivitySummaryTile extends ConsumerStatefulWidget {
   final GroupedExpense group;
@@ -1058,3 +1115,61 @@ class _ExportTile extends StatelessWidget {
   }
 }
 
+class _TimeframeSelector extends ConsumerWidget {
+  const _TimeframeSelector();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final timeframe = ref.watch(analyticsTimeframeProvider);
+    final isDarkMode = ref.watch(themeModeProvider) == ThemeMode.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.white.withValues(alpha: 0.05) : AppColors.background,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDarkMode ? Colors.white12 : Colors.grey.withValues(alpha: 0.1)),
+      ),
+      child: Row(
+        children: AnalyticsTimeframe.values.map((t) {
+          final isSelected = timeframe == t;
+          final label = t == AnalyticsTimeframe.weekly ? 'This Week' :
+                        t == AnalyticsTimeframe.monthly ? 'This Month' : 'This Year';
+          
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => ref.read(analyticsTimeframeProvider.notifier).set(t),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: isSelected ? [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    )
+                  ] : [],
+                ),
+                child: Center(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: isSelected 
+                          ? Colors.white 
+                          : (isDarkMode ? Colors.white54 : AppColors.textSecondary),
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}

@@ -108,6 +108,8 @@ class EarningScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _BalanceCard(currentEarning: currentEarning),
+                  const SizedBox(height: 24),
+                  const _TimeframeSelector(),
                   const SizedBox(height: 32),
                   const _SectionHeader(title: 'Analytics'),
                   const SizedBox(height: 16),
@@ -429,18 +431,18 @@ class _AnalyticsCard extends ConsumerWidget {
                 PieChart(
                   PieChartData(
                     sectionsSpace: 2,
-                    centerSpaceRadius: 60,
+                    centerSpaceRadius: 65,
                     startDegreeOffset: -90,
                     sections: sortedData.map((e) {
-                      final index = sortedData.indexOf(e);
+                      final index = categoryData.keys.toList().indexOf(e.key);
                       final percentage = (e.value / total) * 100;
                       return PieChartSectionData(
                         color: Colors.primaries[index % Colors.primaries.length],
                         value: e.value,
                         title: '${percentage.toStringAsFixed(0)}%',
-                        radius: percentage > 10 ? (percentage > 30 ? 30 : 25) : 20,
-                        titleStyle: TextStyle(
-                          fontSize: percentage > 10 ? 12 : 10,
+                        radius: 25,
+                        titleStyle: const TextStyle(
+                          fontSize: 10,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -467,7 +469,7 @@ class _AnalyticsCard extends ConsumerWidget {
           const SizedBox(height: 24),
           Column(
             children: sortedData.take(4).map((e) {
-              final index = sortedData.indexOf(e);
+              final index = categoryData.keys.toList().indexOf(e.key);
               final color = Colors.primaries[index % Colors.primaries.length];
               final percentage = (e.value / total) * 100;
               return Padding(
@@ -750,3 +752,64 @@ class _ActivitySummaryTileState extends ConsumerState<_ActivitySummaryTile> {
     );
   }
 }
+
+class _TimeframeSelector extends ConsumerWidget {
+  const _TimeframeSelector();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final timeframe = ref.watch(earningAnalyticsTimeframeProvider);
+    final isDarkMode = ref.watch(themeModeProvider) == ThemeMode.dark;
+    final activeColor = Colors.green.shade600;
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.white.withValues(alpha: 0.05) : AppColors.background,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDarkMode ? Colors.white12 : Colors.grey.withValues(alpha: 0.1)),
+      ),
+      child: Row(
+        children: EarningAnalyticsTimeframe.values.map((t) {
+          final isSelected = timeframe == t;
+          final label = t == EarningAnalyticsTimeframe.weekly ? 'This Week' :
+                        t == EarningAnalyticsTimeframe.monthly ? 'This Month' : 'This Year';
+          
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => ref.read(earningAnalyticsTimeframeProvider.notifier).set(t),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: isSelected ? activeColor : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: isSelected ? [
+                    BoxShadow(
+                      color: activeColor.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    )
+                  ] : [],
+                ),
+                child: Center(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: isSelected 
+                          ? Colors.white 
+                          : (isDarkMode ? Colors.white54 : AppColors.textSecondary),
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+

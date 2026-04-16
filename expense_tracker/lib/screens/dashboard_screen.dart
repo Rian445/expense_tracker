@@ -709,20 +709,20 @@ class _ActivitySummaryTileState extends ConsumerState<_ActivitySummaryTile> {
     return Container(
       margin: widget.level == 0 
           ? const EdgeInsets.symmetric(horizontal: 20, vertical: 8)
-          : const EdgeInsets.symmetric(vertical: 2),
+          : const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: widget.level == 0 
             ? (isDarkMode ? const Color(0xFF1E293B) : Colors.white)
-            : (isDarkMode ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.3)),
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(24),
         border: widget.level == 0 
-            ? Border.all(color: isDarkMode ? Colors.white12 : Colors.grey.withValues(alpha: 0.1)) 
+            ? Border.all(color: isDarkMode ? Colors.white.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1)) 
             : null,
         boxShadow: (_isExpanded && widget.level == 0) ? [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: isDarkMode ? 0.4 : 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           )
         ] : [],
       ),
@@ -732,23 +732,46 @@ class _ActivitySummaryTileState extends ConsumerState<_ActivitySummaryTile> {
             onTap: () => setState(() => _isExpanded = !_isExpanded),
             borderRadius: BorderRadius.circular(24),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
                 children: [
-                  SizedBox(
-                    width: 48,
-                    child: widget.level == 0 
-                      ? Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: isDarkMode ? Colors.white10 : AppColors.background,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Icon(_getIcon(), color: AppColors.primary, size: 20),
-                        )
-                      : const SizedBox.shrink(),
-                  ),
-                  const SizedBox(width: 16),
+                  if (widget.level == 0)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.primary,
+                            AppColors.primary.withValues(alpha: 0.8),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      child: Icon(_getIcon(), color: Colors.white, size: 18),
+                    )
+                  else
+                    // Step indicator for nested levels
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4, right: 12),
+                      child: Container(
+                        width: 2,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(1),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -757,29 +780,52 @@ class _ActivitySummaryTileState extends ConsumerState<_ActivitySummaryTile> {
                           fontWeight: widget.level == 0 ? FontWeight.bold : FontWeight.w600, 
                           fontSize: widget.level == 0 ? 16 : 14,
                           color: isDarkMode ? Colors.white : AppColors.textPrimary,
+                          letterSpacing: -0.2,
                         )),
-                        Text('${widget.group.count} records', style: TextStyle(
-                          color: isDarkMode ? Colors.white70 : AppColors.textSecondary, 
-                          fontSize: 11
-                        )),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text('${widget.group.count} trans.', style: TextStyle(
+                              color: isDarkMode ? Colors.white38 : AppColors.textSecondary, 
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            )),
+                            const SizedBox(width: 8),
+                            // Mini progress bar for context
+                            if (widget.level > 0)
+                              Expanded(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(2),
+                                  child: LinearProgressIndicator(
+                                    value: 0.7, // Placeholder or calculated share
+                                    backgroundColor: isDarkMode ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                                    valueColor: AlwaysStoppedAnimation(AppColors.primary.withValues(alpha: 0.5)),
+                                    minHeight: 2,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
+                  const SizedBox(width: 16),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '-${currency.symbol}${widget.group.amount.toStringAsFixed(2)}',
+                        '${currency.symbol}${widget.group.amount.toStringAsFixed(0)}',
                         style: TextStyle(
                           fontWeight: FontWeight.bold, 
-                          fontSize: widget.level == 0 ? 16 : 14, 
-                          color: isDarkMode ? const Color(0xFFFB7185) : AppColors.accent
+                          fontSize: widget.level == 0 ? 17 : 14, 
+                          color: isDarkMode ? Colors.white : AppColors.textPrimary,
                         ),
                       ),
+                      const SizedBox(height: 2),
                       Icon(
                         _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                        size: 16,
-                        color: isDarkMode ? Colors.white54 : AppColors.textSecondary,
+                        size: 14,
+                        color: isDarkMode ? Colors.white24 : AppColors.textSecondary,
                       ),
                     ],
                   ),
@@ -789,11 +835,9 @@ class _ActivitySummaryTileState extends ConsumerState<_ActivitySummaryTile> {
           ),
           if (_isExpanded)
             Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.only(bottom: 12),
               child: Column(
                 children: [
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  const SizedBox(height: 4),
                   if (hasChildren)
                     ...widget.group.children!.map((child) => _ActivitySummaryTile(
                       group: child,
@@ -807,18 +851,26 @@ class _ActivitySummaryTileState extends ConsumerState<_ActivitySummaryTile> {
                         final colorIndex = categories.indexOf(item.category);
                         final dotColor = colorIndex >= 0 
                             ? Colors.primaries[colorIndex % Colors.primaries.length]
-                            : AppColors.primaryLight;
+                            : AppColors.primary;
 
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 24),
+                        return Container(
+                          margin: const EdgeInsets.only(left: 32, right: 16, bottom: 4),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isDarkMode ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                           child: Row(
                             children: [
                               Container(
-                                width: 8,
-                                height: 8,
+                                width: 6,
+                                height: 6,
                                 decoration: BoxDecoration(
                                   color: dotColor,
                                   shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(color: dotColor.withValues(alpha: 0.4), blurRadius: 4)
+                                  ],
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -828,23 +880,23 @@ class _ActivitySummaryTileState extends ConsumerState<_ActivitySummaryTile> {
                                   children: [
                                     Text(item.category, style: TextStyle(
                                       fontSize: 13, 
-                                      fontWeight: FontWeight.w500,
-                                      color: isDarkMode ? Colors.white : AppColors.textPrimary
+                                      fontWeight: FontWeight.bold,
+                                      color: isDarkMode ? Colors.white : AppColors.textPrimary,
                                     )),
                                     if (item.subCategory != null)
                                       Text(item.subCategory!, style: TextStyle(
-                                        fontSize: 10, 
-                                        color: isDarkMode ? Colors.white54 : AppColors.textSecondary
+                                        fontSize: 11, 
+                                        color: isDarkMode ? Colors.white38 : AppColors.textSecondary,
                                       )),
                                   ],
                                 ),
                               ),
                               Text(
-                                '-${currency.symbol}${item.amount.toStringAsFixed(2)}',
+                                '${currency.symbol}${item.amount.toStringAsFixed(2)}',
                                 style: TextStyle(
-                                  fontSize: 13, 
-                                  fontWeight: FontWeight.w600,
-                                  color: isDarkMode ? Colors.white : AppColors.textPrimary
+                                  fontWeight: FontWeight.w800, 
+                                  fontSize: 13,
+                                  color: isDarkMode ? const Color(0xFFFB7185) : AppColors.accent,
                                 ),
                               ),
                             ],

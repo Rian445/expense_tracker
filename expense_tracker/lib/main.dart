@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'models/expense.dart';
 import 'screens/dashboard_screen.dart';
+import 'core/constants/app_theme.dart';
+import 'providers/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -11,6 +13,7 @@ void main() async {
   Hive.registerAdapter(ExpenseAdapter());
   
   await Hive.openBox<Expense>('expensesBox');
+  await Hive.openBox('settings');
   await Hive.openBox('categoriesBox');
   
   runApp(
@@ -20,17 +23,19 @@ void main() async {
   );
 }
 
-class ExpenseTrackerApp extends StatelessWidget {
+class ExpenseTrackerApp extends ConsumerWidget {
   const ExpenseTrackerApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+
     return MaterialApp(
       title: 'Expense Tracker',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode,
+      debugShowCheckedModeBanner: false,
       home: const DashboardScreen(),
     );
   }

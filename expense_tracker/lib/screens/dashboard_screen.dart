@@ -9,6 +9,7 @@ import 'add_expense_screen.dart';
 
 import '../providers/settings_provider.dart';
 import '../services/export_service.dart';
+import '../providers/expense_provider.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -180,9 +181,60 @@ class DashboardScreen extends ConsumerWidget {
 
   void _showExportOptions(BuildContext context, WidgetRef ref) {
     final timeframe = ref.read(analyticsTimeframeProvider);
-    final expenses = ref.read(filteredExpensesProvider);
-    final timeframeLabel = timeframe.name;
+    final allExpenses = ref.read(expenseProvider);
+    
+    if (timeframe == AnalyticsTimeframe.yearly) {
+      // Step 1: Select Year
+      final years = allExpenses.map((e) => e.date.year).toSet().toList()..sort((a, b) => b.compareTo(a));
+      
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        builder: (context) {
+          return Container(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Select Year', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.titleLarge?.color)),
+                const SizedBox(height: 20),
+                Expanded(
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: [
+                      _StepTile(
+                        label: 'All Years so far',
+                        onTap: () {
+                          Navigator.pop(context);
+                          _showFormatOptions(context, allExpenses, 'All_Time');
+                        },
+                      ),
+                      ...years.map((year) => _StepTile(
+                        label: year.toString(),
+                        onTap: () {
+                          Navigator.pop(context);
+                          final filtered = allExpenses.where((e) => e.date.year == year).toList();
+                          _showFormatOptions(context, filtered, year.toString());
+                        },
+                      )),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          );
+        },
+      );
+    } else {
+      // Direct to Format Selection for Weekly/Monthly
+      final expenses = ref.read(filteredExpensesProvider);
+      _showFormatOptions(context, expenses, timeframe.name);
+    }
+  }
 
+  void _showFormatOptions(BuildContext context, List<Expense> expenses, String label) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -193,9 +245,7 @@ class DashboardScreen extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Export Report', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.titleLarge?.color)),
-              const SizedBox(height: 12),
-              Text('Data for: ${timeframeLabel.toUpperCase()}', style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+              Text('Export - $label', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.titleLarge?.color)),
               const SizedBox(height: 24),
               _ExportTile(
                 icon: Icons.table_chart_outlined,
@@ -203,33 +253,7 @@ class DashboardScreen extends ConsumerWidget {
                 color: Colors.green,
                 onTap: () async {
                   Navigator.pop(context);
-                  if (expenses.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No expenses found for this selection.')));
-                    return;
-                  }
-                  
-                  // Show loading
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Row(
-                        children: [
-                          SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
-                          SizedBox(width: 16),
-                          Text('Generating CSV report...'),
-                        ],
-                      ),
-                      duration: Duration(seconds: 10),
-                    ),
-                  );
-
-                  try {
-                    await ExportService.exportCSV(expenses, timeframeLabel);
-                    if (context.mounted) ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
-                  }
+                  _runExport(context, () => ExportService.exportCSV(expenses, label), 'CSV');
                 },
               ),
               _ExportTile(
@@ -238,32 +262,7 @@ class DashboardScreen extends ConsumerWidget {
                 color: Colors.blue,
                 onTap: () async {
                   Navigator.pop(context);
-                  if (expenses.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No expenses found for this selection.')));
-                    return;
-                  }
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Row(
-                        children: [
-                          SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
-                          SizedBox(width: 16),
-                          Text('Generating Excel report...'),
-                        ],
-                      ),
-                      duration: Duration(seconds: 10),
-                    ),
-                  );
-
-                  try {
-                    await ExportService.exportExcel(expenses, timeframeLabel);
-                    if (context.mounted) ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
-                  }
+                  _runExport(context, () => ExportService.exportExcel(expenses, label), 'Excel');
                 },
               ),
               _ExportTile(
@@ -272,32 +271,7 @@ class DashboardScreen extends ConsumerWidget {
                 color: Colors.red,
                 onTap: () async {
                   Navigator.pop(context);
-                  if (expenses.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No expenses found for this selection.')));
-                    return;
-                  }
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Row(
-                        children: [
-                          SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
-                          SizedBox(width: 16),
-                          Text('Generating PDF report...'),
-                        ],
-                      ),
-                      duration: Duration(seconds: 10),
-                    ),
-                  );
-
-                  try {
-                    await ExportService.exportPDF(expenses, timeframeLabel);
-                    if (context.mounted) ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
-                  }
+                  _runExport(context, () => ExportService.exportPDF(expenses, label), 'PDF');
                 },
               ),
               const SizedBox(height: 16),
@@ -305,6 +279,52 @@ class DashboardScreen extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+
+  Future<void> _runExport(BuildContext context, Future Function() exportFn, String format) async {
+    // Show loading
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+            const SizedBox(width: 16),
+            Text('Generating $format report...'),
+          ],
+        ),
+        duration: const Duration(seconds: 10),
+      ),
+    );
+
+    try {
+      await exportFn();
+      if (context.mounted) ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+    }
+  }
+}
+
+class _StepTile extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+
+  const _StepTile({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        onTap: onTap,
+        title: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+        trailing: const Icon(Icons.chevron_right),
+        tileColor: AppColors.primary.withValues(alpha: 0.05),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
     );
   }
 }

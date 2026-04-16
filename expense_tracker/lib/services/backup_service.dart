@@ -5,15 +5,18 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/expense.dart';
+import '../models/earning.dart';
 
 class BackupService {
   static Future<void> exportBackup() async {
     try {
       final expensesBox = Hive.box<Expense>('expensesBox');
+      final earningsBox = Hive.box<Earning>('earningsBox');
       final settingsBox = Hive.box('settings');
       final categoriesBox = Hive.box('categoriesBox');
 
       final List<Map<String, dynamic>> expenses = expensesBox.values.map((e) => e.toMap()).toList();
+      final List<Map<String, dynamic>> earnings = earningsBox.values.map((e) => e.toMap()).toList();
       
       final Map<String, dynamic> settings = {};
       for (var key in settingsBox.keys) {
@@ -29,9 +32,10 @@ class BackupService {
       }
 
       final backupData = {
-        'version': 1,
+        'version': 2,
         'timestamp': DateTime.now().millisecondsSinceEpoch,
         'expenses': expenses,
+        'earnings': earnings,
         'settings': settings,
         'categories': categories,
       };
@@ -68,9 +72,11 @@ class BackupService {
       final expensesBox = Hive.box<Expense>('expensesBox');
       final settingsBox = Hive.box('settings');
       final categoriesBox = Hive.box('categoriesBox');
+      final earningsBox = Hive.box<Earning>('earningsBox');
 
       // Clear current boxes
       await expensesBox.clear();
+      await earningsBox.clear();
       await settingsBox.clear();
       await categoriesBox.clear();
 
@@ -79,6 +85,15 @@ class BackupService {
       for (var item in expensesList) {
         final expense = Expense.fromMap(Map<String, dynamic>.from(item));
         await expensesBox.add(expense);
+      }
+
+      // Restore earnings (if they exist in backup compatible with version 2)
+      if (backupData['earnings'] != null) {
+        final List<dynamic> earningsList = backupData['earnings'];
+        for (var item in earningsList) {
+          final earning = Earning.fromMap(Map<String, dynamic>.from(item));
+          await earningsBox.add(earning);
+        }
       }
 
       // Restore settings

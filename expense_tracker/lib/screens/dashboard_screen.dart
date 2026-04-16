@@ -12,6 +12,7 @@ import '../services/export_service.dart';
 import '../providers/expense_provider.dart';
 import '../services/backup_service.dart';
 import '../providers/category_provider.dart';
+import '../providers/earning_provider.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -30,9 +31,11 @@ class DashboardScreen extends ConsumerWidget {
       case AnalyticsTimeframe.yearly: activityTitle = 'Yearly Summary'; break;
     }
 
+    final isDarkMode = ref.watch(themeModeProvider) == ThemeMode.dark;
+
     return Scaffold(
       drawer: Drawer(
-        backgroundColor: AppColors.background,
+        backgroundColor: isDarkMode ? const Color(0xFF0F172A) : AppColors.background,
         child: Column(
           children: [
             DrawerHeader(
@@ -59,49 +62,61 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ),
             _DrawerItem(icon: Icons.dashboard_outlined, label: 'Dashboard', isSelected: true, onTap: () => Navigator.pop(context)),
-            _DrawerItem(icon: Icons.history_outlined, label: 'Transaction History', onTap: () {}),
-            _DrawerItem(icon: Icons.category_outlined, label: 'Categories', onTap: () {}),
-            _DrawerItem(icon: Icons.settings_outlined, label: 'Settings', onTap: () {}),
             const Divider(height: 32, indent: 20, endIndent: 20),
-            _DrawerItem(
-              icon: Icons.cloud_upload_outlined, 
-              label: 'Backup Data', 
-              onTap: () async {
-                Navigator.pop(context);
-                try {
-                  await BackupService.exportBackup();
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Backup failed: $e'))
-                    );
-                  }
-                }
-              }
-            ),
-            _DrawerItem(
-              icon: Icons.cloud_download_outlined, 
-              label: 'Restore Data', 
-              onTap: () async {
-                Navigator.pop(context);
-                try {
-                  final success = await BackupService.importBackup();
-                  if (success && context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Data restored successfully! Refreshing...'))
-                    );
-                    ref.invalidate(expenseProvider);
-                    ref.invalidate(categoryTotalsProvider);
-                    ref.invalidate(categoryProvider);
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Restore failed: $e'))
-                    );
-                  }
-                }
-              }
+            Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                leading: Icon(Icons.cloud_sync_outlined, color: ref.watch(themeModeProvider) == ThemeMode.dark ? Colors.white70 : AppColors.textSecondary),
+                title: Text('Backup / Restore', style: TextStyle(
+                  color: ref.watch(themeModeProvider) == ThemeMode.dark ? Colors.white : AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                )),
+                childrenPadding: const EdgeInsets.only(left: 20),
+                children: [
+                  _DrawerItem(
+                    icon: Icons.cloud_upload_outlined, 
+                    label: 'Export Backup', 
+                    onTap: () async {
+                      Navigator.pop(context);
+                      try {
+                        await BackupService.exportBackup();
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Backup failed: $e'))
+                          );
+                        }
+                      }
+                    }
+                  ),
+                  _DrawerItem(
+                    icon: Icons.cloud_download_outlined, 
+                    label: 'Import Backup', 
+                    onTap: () async {
+                      Navigator.pop(context);
+                      try {
+                        final success = await BackupService.importBackup();
+                        if (success && context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Data restored successfully! Refreshing...'))
+                          );
+                          ref.invalidate(expenseProvider);
+                          ref.invalidate(categoryTotalsProvider);
+                          ref.invalidate(categoryProvider);
+                          ref.invalidate(earningProvider);
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Restore failed: $e'))
+                          );
+                        }
+                      }
+                    }
+                  ),
+                ],
+              ),
             ),
             const Divider(height: 32, indent: 20, endIndent: 20),
             const Padding(
@@ -964,7 +979,7 @@ class _ActivitySummaryTileState extends ConsumerState<_ActivitySummaryTile> {
   }
 }
 
-class _DrawerItem extends StatelessWidget {
+class _DrawerItem extends ConsumerWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
@@ -978,19 +993,28 @@ class _DrawerItem extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isDarkMode = ref.watch(themeModeProvider) == ThemeMode.dark;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: ListTile(
         onTap: onTap,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         tileColor: isSelected ? AppColors.primary.withValues(alpha: 0.1) : null,
-        leading: Icon(icon, color: isSelected ? AppColors.primary : AppColors.textSecondary),
+        leading: Icon(
+          icon, 
+          color: isSelected ? AppColors.primary : (isDarkMode ? Colors.white70 : AppColors.textSecondary),
+          size: 22,
+        ),
         title: Text(
           label,
           style: TextStyle(
-            color: isSelected ? AppColors.primary : AppColors.textPrimary,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected 
+                ? AppColors.primary 
+                : (isDarkMode ? Colors.white : AppColors.textPrimary),
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            fontSize: 14,
           ),
         ),
       ),

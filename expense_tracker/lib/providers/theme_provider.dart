@@ -10,8 +10,8 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
   @override
   ThemeMode build() {
     final box = Hive.box('settingsBox');
-    final savedMode = box.get('themeMode', defaultValue: 'light');
-    return savedMode == 'dark' ? ThemeMode.dark : ThemeMode.light;
+    final savedMode = box.get('themeMode', defaultValue: 'dark');
+    return savedMode == 'light' ? ThemeMode.light : ThemeMode.dark;
   }
 
   void toggle() {

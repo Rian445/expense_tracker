@@ -66,6 +66,71 @@ class SmsSettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 32),
 
+            // ── Privacy & Security Shield ──────────────────────────────────────────
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.verified_user_rounded, color: Color(0xFF10B981), size: 28),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Privacy First. Always.',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: isDarkMode ? Colors.white : AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _PrivacyFeature(
+                    icon: Icons.wifi_off_rounded,
+                    title: 'Offline Data Isolation',
+                    desc: 'Engineered for absolute privacy. Internet access is physically disabled, so no data can ever leave your device.',
+                    isDarkMode: isDarkMode,
+                  ),
+                  const SizedBox(height: 12),
+                  _PrivacyFeature(
+                    icon: Icons.storage_rounded,
+                    title: 'On-Device Analysis',
+                    desc: 'The "Brain" of the app lives inside your phone. All SMS parsing and expense matching happen locally.',
+                    isDarkMode: isDarkMode,
+                  ),
+                  const SizedBox(height: 12),
+                  _PrivacyFeature(
+                    icon: Icons.visibility_off_rounded,
+                    title: 'Financial-Only Focus',
+                    desc: 'We only scan for banking keywords. Your personal conversations, private chats, and OTPs remain completely invisible to the app.',
+                    isDarkMode: isDarkMode,
+                  ),
+                  const SizedBox(height: 12),
+                  _PrivacyFeature(
+                    icon: Icons.security_rounded,
+                    title: 'Breach-Proof Isolation',
+                    desc: 'No Internet permission means no data can be breached. Your information is physically trapped inside your phone, making it immune to online leaks.',
+                    isDarkMode: isDarkMode,
+                  ),
+                  const SizedBox(height: 12),
+                  _PrivacyFeature(
+                    icon: Icons.enhanced_encryption_rounded,
+                    title: 'Hardware-Backed Encryption',
+                    desc: 'Your data is locked with AES-256 encryption. The keys are stored in your device\'s secure hardware vault, making it invisible to other apps.',
+                    isDarkMode: isDarkMode,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+
             // ── Toggle ──────────────────────────────────────────────────────
             _SettingsCard(
               isDarkMode: isDarkMode,
@@ -183,44 +248,7 @@ class SmsSettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
 
-            // ── Privacy notice ──────────────────────────────────────────────
-            _SettingsCard(
-              isDarkMode: isDarkMode,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.lock_outline_rounded,
-                      color: AppColors.primary, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Privacy & Security',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: isDarkMode ? Colors.white : AppColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Raw SMS messages are never stored. Only structured data '
-                          '(amount, merchant, date) is saved to your local device. '
-                          'Nothing is sent to any server.',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDarkMode ? Colors.white54 : AppColors.textSecondary,
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+
           ],
         ),
       ),
@@ -290,6 +318,55 @@ class _SettingsCard extends StatelessWidget {
         ),
       ),
       child: child,
+    );
+  }
+}
+
+class _PrivacyFeature extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String desc;
+  final bool isDarkMode;
+
+  const _PrivacyFeature({
+    required this.icon,
+    required this.title,
+    required this.desc,
+    required this.isDarkMode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: const Color(0xFF10B981).withValues(alpha: 0.7), size: 20),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: isDarkMode ? Colors.white : AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                desc,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDarkMode ? Colors.white38 : AppColors.textSecondary,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

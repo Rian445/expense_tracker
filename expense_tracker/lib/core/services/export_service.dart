@@ -65,34 +65,34 @@ class ExportService {
     final pdf = pw.Document();
 
     pdf.addPage(
-      pw.Page(
-        build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(
-                'Expense Report',
-                style: pw.TextStyle(
-                  fontSize: 24,
-                  fontWeight: pw.FontWeight.bold,
-                ),
-              ),
-              pw.SizedBox(height: 20),
-              pw.TableHelper.fromTextArray(
-                context: context,
-                data: <List<String>>[
-                  ['Date', 'Category', 'Subcategory', 'Amount', 'Payment Method'],
-                  ...expenses.map((expense) => [
-                    DateFormat('yyyy-MM-dd').format(expense.date),
-                    expense.category,
-                    expense.subCategory ?? '',
-                    '\$${expense.amount.toStringAsFixed(2)}',
-                    expense.paymentMethod,
-                  ]),
-                ],
-              ),
-            ],
+      pw.MultiPage(
+        header: (pw.Context context) {
+          return pw.Text(
+            'Expense Report',
+            style: pw.TextStyle(
+              fontSize: 24,
+              fontWeight: pw.FontWeight.bold,
+            ),
           );
+        },
+        build: (pw.Context context) {
+          return [
+            pw.SizedBox(height: 20),
+            pw.TableHelper.fromTextArray(
+              context: context,
+              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              data: <List<String>>[
+                ['Date', 'Category', 'Subcategory', 'Amount', 'Payment Method'],
+                ...expenses.map((expense) => [
+                  DateFormat('yyyy-MM-dd').format(expense.date),
+                  expense.category,
+                  expense.subCategory ?? '',
+                  'Tk ${expense.amount.toStringAsFixed(2)}',
+                  expense.paymentMethod,
+                ]),
+              ],
+            ),
+          ];
         },
       ),
     );

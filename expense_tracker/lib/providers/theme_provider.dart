@@ -9,13 +9,13 @@ final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(() {
 class ThemeModeNotifier extends Notifier<ThemeMode> {
   @override
   ThemeMode build() {
-    final box = Hive.box('settings');
+    final box = Hive.box('settingsBox');
     final savedMode = box.get('themeMode', defaultValue: 'light');
     return savedMode == 'dark' ? ThemeMode.dark : ThemeMode.light;
   }
 
   void toggle() {
     state = state == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
-    Hive.box('settings').put('themeMode', state == ThemeMode.dark ? 'dark' : 'light');
+    Hive.box('settingsBox').put('themeMode', state == ThemeMode.dark ? 'dark' : 'light');
   }
 }

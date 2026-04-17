@@ -28,4 +28,28 @@ class Loan extends HiveObject {
     required this.receiveMethod,
     required this.date,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'amount': amount,
+      'purpose': purpose,
+      'loanFrom': loanFrom,
+      'duration': duration,
+      'receiveMethod': receiveMethod,
+      'date': date.millisecondsSinceEpoch,
+    };
+  }
+
+  factory Loan.fromMap(Map<String, dynamic> map) {
+    return Loan(
+      id: map['id'],
+      amount: (map['amount'] as num).toDouble(),
+      purpose: map['purpose'],
+      loanFrom: map['loanFrom'],
+      duration: map['duration'],
+      receiveMethod: map['receiveMethod'],
+      date: DateTime.fromMillisecondsSinceEpoch(map['date']),
+    );
+  }
 }

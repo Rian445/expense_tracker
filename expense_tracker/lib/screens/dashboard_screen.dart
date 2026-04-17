@@ -7,12 +7,10 @@ import '../core/constants/app_theme.dart';
 import '../models/expense.dart';
 import 'add_expense_screen.dart';
 import 'sms_settings_screen.dart';
+import 'backup_restore_screen.dart';
 import '../providers/settings_provider.dart';
 import '../services/export_service.dart';
 import '../providers/expense_provider.dart';
-import '../services/backup_service.dart';
-import '../providers/category_provider.dart';
-import '../providers/earning_provider.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -63,60 +61,16 @@ class DashboardScreen extends ConsumerWidget {
             ),
             _DrawerItem(icon: Icons.dashboard_outlined, label: 'Dashboard', isSelected: true, onTap: () => Navigator.pop(context)),
             const Divider(height: 32, indent: 20, endIndent: 20),
-            Theme(
-              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-              child: ExpansionTile(
-                leading: Icon(Icons.cloud_sync_outlined, color: ref.watch(themeModeProvider) == ThemeMode.dark ? Colors.white70 : AppColors.textSecondary),
-                title: Text('Backup / Restore', style: TextStyle(
-                  color: ref.watch(themeModeProvider) == ThemeMode.dark ? Colors.white : AppColors.textPrimary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                )),
-                childrenPadding: const EdgeInsets.only(left: 20),
-                children: [
-                  _DrawerItem(
-                    icon: Icons.cloud_upload_outlined, 
-                    label: 'Export Backup', 
-                    onTap: () async {
-                      Navigator.pop(context);
-                      try {
-                        await BackupService.exportBackup();
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Backup failed: $e'))
-                          );
-                        }
-                      }
-                    }
-                  ),
-                  _DrawerItem(
-                    icon: Icons.cloud_download_outlined, 
-                    label: 'Import Backup', 
-                    onTap: () async {
-                      Navigator.pop(context);
-                      try {
-                        final success = await BackupService.importBackup();
-                        if (success && context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Data restored successfully! Refreshing...'))
-                          );
-                          ref.invalidate(expenseProvider);
-                          ref.invalidate(categoryTotalsProvider);
-                          ref.invalidate(categoryProvider);
-                          ref.invalidate(earningProvider);
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Restore failed: $e'))
-                          );
-                        }
-                      }
-                    }
-                  ),
-                ],
-              ),
+            _DrawerItem(
+              icon: Icons.vpn_key_outlined,
+              label: 'Secure Data Vault',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const BackupRestoreScreen()),
+                );
+              },
             ),
             const Divider(height: 32, indent: 20, endIndent: 20),
             _DrawerItem(

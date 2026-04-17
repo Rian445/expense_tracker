@@ -17,14 +17,14 @@ final currencyProvider = NotifierProvider<CurrencyNotifier, Currency>(() {
 class CurrencyNotifier extends Notifier<Currency> {
   @override
   Currency build() {
-    final box = Hive.box('settings');
+    final box = Hive.box('settingsBox');
     final savedCode = box.get('currency', defaultValue: 'USD');
     return Currency.values.firstWhere((c) => c.code == savedCode, orElse: () => Currency.usd);
   }
 
   void set(Currency currency) {
     state = currency;
-    Hive.box('settings').put('currency', currency.code);
+    Hive.box('settingsBox').put('currency', currency.code);
   }
 }
 
@@ -36,18 +36,17 @@ final smsAutoTrackingProvider =
 class SmsAutoTrackingNotifier extends Notifier<bool> {
   @override
   bool build() {
-    return Hive.box('settings').get('smsAutoTracking', defaultValue: false) as bool;
+    return Hive.box('settingsBox').get('smsAutoTracking', defaultValue: false) as bool;
   }
 
   void toggle() {
     final newVal = !state;
     state = newVal;
-    Hive.box('settings').put('smsAutoTracking', newVal);
+    Hive.box('settingsBox').put('smsAutoTracking', newVal);
   }
 
   void set(bool value) {
     state = value;
-    Hive.box('settings').put('smsAutoTracking', value);
+    Hive.box('settingsBox').put('smsAutoTracking', value);
   }
 }
-

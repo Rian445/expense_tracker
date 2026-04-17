@@ -20,7 +20,7 @@ class ExportService {
     for (var expense in expenses) {
       total += expense.amount;
       rows.add([
-        DateFormat('yyyy-MM-dd HH:mm').format(expense.date),
+        DateFormat('yyyy-MM-dd').format(expense.date),
         expense.category,
         expense.subCategory ?? '',
         expense.amount,
@@ -49,7 +49,7 @@ class ExportService {
     for (var expense in expenses) {
       total += expense.amount;
       sheetObject.appendRow([
-        TextCellValue(DateFormat('yyyy-MM-dd HH:mm').format(expense.date)),
+        TextCellValue(DateFormat('yyyy-MM-dd').format(expense.date)),
         TextCellValue(expense.category),
         TextCellValue(expense.subCategory ?? ''),
         DoubleCellValue(expense.amount),
@@ -85,7 +85,7 @@ class ExportService {
       pw.MultiPage(
         build: (context) => [
           pw.Header(level: 0, child: pw.Text(timeframe == 'All_Time' ? 'Historical Expense Report' : 'Expense Report - $timeframe')),
-          pw.Paragraph(text: 'Total Spending: ${total.toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
+          pw.Paragraph(text: 'Total Spending: Tk ${total.toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
           pw.SizedBox(height: 20),
           
           pw.Text('Category Distribution', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 18)),
@@ -103,40 +103,37 @@ class ExportService {
             return [
               pw.SizedBox(height: 20),
               pw.Text('YEAR $year', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 22, color: PdfColors.indigo900)),
-              pw.Text('Sub-total: ${yearTotal.toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+              pw.Text('Sub-total: Tk ${yearTotal.toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
               pw.Divider(),
               
-              ...months.entries.map((monthEntry) {
+              ...months.entries.expand((monthEntry) {
                 final monthName = monthEntry.key;
                 final monthExpenses = monthEntry.value;
                 final monthTotal = monthExpenses.fold(0.0, (sum, e) => sum + e.amount);
 
-                return pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.SizedBox(height: 15),
-                    pw.Text('$monthName $year', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
-                    pw.SizedBox(height: 8),
-                    pw.TableHelper.fromTextArray(
-                      headers: ['Date', 'Category', 'Sub-Category', 'Amount', 'Method'],
-                      headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                      data: monthExpenses.map((e) => [
-                        DateFormat('MMM dd').format(e.date),
-                        e.category,
-                        e.subCategory ?? '',
-                        e.amount.toStringAsFixed(2),
-                        e.paymentMethod,
-                      ]).toList(),
+                return [
+                  pw.SizedBox(height: 15),
+                  pw.Text('$monthName $year', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
+                  pw.SizedBox(height: 8),
+                  pw.TableHelper.fromTextArray(
+                    headers: ['Date', 'Category', 'Sub-Category', 'Amount', 'Method'],
+                    headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                    data: monthExpenses.map((e) => [
+                      DateFormat('MMM dd').format(e.date),
+                      e.category,
+                      e.subCategory ?? '',
+                      'Tk ${e.amount.toStringAsFixed(2)}',
+                      e.paymentMethod,
+                    ]).toList(),
+                  ),
+                  pw.Align(
+                    alignment: pw.Alignment.centerRight,
+                    child: pw.Padding(
+                      padding: const pw.EdgeInsets.only(top: 8),
+                      child: pw.Text('Month Total: Tk ${monthTotal.toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                     ),
-                    pw.Align(
-                      alignment: pw.Alignment.centerRight,
-                      child: pw.Padding(
-                        padding: const pw.EdgeInsets.only(top: 8),
-                        child: pw.Text('Month Total: ${monthTotal.toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                      ),
-                    ),
-                  ],
-                );
+                  ),
+                ];
               }),
             ];
           }),

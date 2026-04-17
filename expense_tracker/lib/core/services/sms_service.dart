@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:another_telephony/telephony.dart';
+import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../models/expense.dart';
 import '../../models/earning.dart';
 import '../../providers/expense_provider.dart';
@@ -23,14 +25,16 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
     Hive.registerAdapter(EarningAdapter());
   }
   
+  final cipher = await _getCipher();
+  
   if (!Hive.isBoxOpen('expensesBox')) {
-    await Hive.openBox<Expense>('expensesBox');
+    await Hive.openBox<Expense>('expensesBox', encryptionCipher: cipher);
   }
   if (!Hive.isBoxOpen('earningsBox')) {
-    await Hive.openBox<Earning>('earningsBox');
+    await Hive.openBox<Earning>('earningsBox', encryptionCipher: cipher);
   }
   if (!Hive.isBoxOpen('settingsBox')) {
-    await Hive.openBox('settingsBox');
+    await Hive.openBox('settingsBox', encryptionCipher: cipher);
   }
 
   DateTime? receivedDate;
@@ -133,10 +137,11 @@ class SmsService {
     final granted = await _telephony.requestSmsPermissions ?? false;
     if (!granted) return false;
 
-    // Ensure boxes are open
-    if (!Hive.isBoxOpen('settingsBox')) await Hive.openBox('settingsBox');
-    if (!Hive.isBoxOpen('expensesBox')) await Hive.openBox<Expense>('expensesBox');
-    if (!Hive.isBoxOpen('earningsBox')) await Hive.openBox<Earning>('earningsBox');
+    // Ensure boxes are open with encryption
+    final cipher = await _getCipher();
+    if (!Hive.isBoxOpen('settingsBox')) await Hive.openBox('settingsBox', encryptionCipher: cipher);
+    if (!Hive.isBoxOpen('expensesBox')) await Hive.openBox<Expense>('expensesBox', encryptionCipher: cipher);
+    if (!Hive.isBoxOpen('earningsBox')) await Hive.openBox<Earning>('earningsBox', encryptionCipher: cipher);
 
     // Sync missed messages first
     await syncInbox(ref);
@@ -200,4 +205,17 @@ class SmsService {
     // telephony package doesn't expose a stop method,
     // so we guard via the smsAutoTrackingProvider boolean.
   }
+}
+
+/// Retrieves the secure encryption cipher from storage.
+Future<HiveAesCipher> _getCipher() async {
+  const secureStorage = FlutterSecureStorage();
+  final encryptionKeyString = await secureStorage.read(key: 'db_key');
+  if (encryptionKeyString == null) {
+    final key = Hive.generateSecureKey();
+    await secureStorage.write(key: 'db_key', value: base64UrlEncode(key));
+    return HiveAesCipher(key);
+  }
+  final encryptionKey = base64Url.decode(encryptionKeyString);
+  return HiveAesCipher(encryptionKey);
 }

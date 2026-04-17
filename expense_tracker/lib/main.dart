@@ -8,20 +8,40 @@ import 'screens/app_shell.dart';
 import 'core/constants/app_theme.dart';
 import 'providers/theme_provider.dart';
 
+import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   await Hive.initFlutter();
+  
+  // ── Secure Encryption Setup ───────────────────────────────────────────
+  const secureStorage = FlutterSecureStorage();
+  final encryptionKeyString = await secureStorage.read(key: 'db_key');
+  final List<int> encryptionKey;
+  
+  if (encryptionKeyString == null) {
+    final key = Hive.generateSecureKey();
+    await secureStorage.write(key: 'db_key', value: base64UrlEncode(key));
+    encryptionKey = key;
+  } else {
+    encryptionKey = base64Url.decode(encryptionKeyString);
+  }
+  
+  final cipher = HiveAesCipher(encryptionKey);
+  // ───────────────────────────────────────────────────────────────────────
+
   Hive.registerAdapter(ExpenseAdapter());
   Hive.registerAdapter(EarningAdapter());
   Hive.registerAdapter(LoanAdapter());
   
-  await Hive.openBox<Expense>('expensesBox');
-  await Hive.openBox<Earning>('earningsBox');
-  await Hive.openBox<Loan>('loansBox');
-  await Hive.openBox('settings');
-  await Hive.openBox('categoriesBox');
-  await Hive.openBox('loanCategoriesBox');
+  await Hive.openBox<Expense>('expensesBox', encryptionCipher: cipher);
+  await Hive.openBox<Earning>('earningsBox', encryptionCipher: cipher);
+  await Hive.openBox<Loan>('loansBox', encryptionCipher: cipher);
+  await Hive.openBox('settingsBox', encryptionCipher: cipher);
+  await Hive.openBox('categoriesBox', encryptionCipher: cipher);
+  await Hive.openBox('loanCategoriesBox', encryptionCipher: cipher);
   
   runApp(
     const ProviderScope(

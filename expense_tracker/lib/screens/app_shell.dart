@@ -7,7 +7,7 @@ import '../core/services/sms_service.dart';
 import 'dashboard_screen.dart';
 import 'earning_screen.dart';
 import 'loan_screen.dart';
-import 'placeholder_screens.dart';
+import 'summary_screen.dart';
 
 class _BottomNavIndexNotifier extends Notifier<int> {
   @override

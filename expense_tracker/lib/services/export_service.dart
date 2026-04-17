@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import '../models/expense.dart';
 import '../models/earning.dart';
+import '../models/loan.dart';
 
 class ExportService {
   static Future<void> exportCSV(List<Expense> expenses, String timeframe) async {
@@ -435,5 +436,213 @@ class ExportService {
       ),
     );
   }
+
+  static Future<void> exportLoansCSV(List<Loan> loans, String timeframe) async {
+    List<List<dynamic>> rows = [
+      ['Date', 'Purpose of Loan', 'Loan From', 'Duration', 'Amount', 'Receive Method']
+    ];
+
+    double total = 0;
+    for (var loan in loans) {
+      total += loan.amount;
+      rows.add([
+        DateFormat('yyyy-MM-dd HH:mm').format(loan.date),
+        loan.purpose,
+        loan.loanFrom,
+        loan.duration,
+        loan.amount,
+        loan.receiveMethod,
+      ]);
+    }
+
+    rows.add([]);
+    rows.add(['', '', '', 'TOTAL', total, '']);
+
+    String csv = const CsvEncoder().convert(rows);
+    final directory = await getTemporaryDirectory();
+    final path = '${directory.path}/loans_export_$timeframe.csv';
+    final file = File(path);
+    await file.writeAsString(csv);
+    await Share.shareXFiles([XFile(path, mimeType: 'text/csv')], text: 'Loan Export ($timeframe)');
+  }
+
+  static Future<void> exportLoansExcel(List<Loan> loans, String timeframe) async {
+    var excel = Excel.createExcel();
+    Sheet sheetObject = excel['Sheet1'];
+
+    sheetObject.appendRow(['Date', 'Purpose of Loan', 'Loan From', 'Duration', 'Amount', 'Receive Method'].map((e) => TextCellValue(e)).toList());
+
+    double total = 0;
+    for (var loan in loans) {
+      total += loan.amount;
+      sheetObject.appendRow([
+        TextCellValue(DateFormat('yyyy-MM-dd HH:mm').format(loan.date)),
+        TextCellValue(loan.purpose),
+        TextCellValue(loan.loanFrom),
+        TextCellValue(loan.duration),
+        DoubleCellValue(loan.amount),
+        TextCellValue(loan.receiveMethod),
+      ]);
+    }
+
+    sheetObject.appendRow([TextCellValue(''), TextCellValue(''), TextCellValue(''), TextCellValue('TOTAL'), DoubleCellValue(total), TextCellValue('')]);
+
+    final directory = await getTemporaryDirectory();
+    final path = '${directory.path}/loans_export_$timeframe.xlsx';
+    final fileBytes = excel.save();
+    if (fileBytes != null) {
+      await File(path).writeAsBytes(fileBytes);
+      await Share.shareXFiles([XFile(path, mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')], text: 'Loan Export ($timeframe)');
+    }
+  }
+
+  static Future<void> exportLoansPDF(List<Loan> loans, String timeframe) async {
+    final pdf = pw.Document();
+    loans.sort((a, b) => a.date.compareTo(b.date));
+    final total = loans.fold(0.0, (sum, e) => sum + e.amount);
+
+    final Map<int, Map<String, List<Loan>>> hierarchicalGroups = {};
+    for (var e in loans) {
+      final year = e.date.year;
+      final month = DateFormat('MMMM').format(e.date);
+      hierarchicalGroups[year] ??= {};
+      hierarchicalGroups[year]![month] = (hierarchicalGroups[year]![month] ?? [])..add(e);
+    }
+
+    pdf.addPage(
+      pw.MultiPage(
+        build: (context) => [
+          pw.Header(level: 0, child: pw.Text(timeframe == 'All_Time' ? 'Historical Loan Report' : 'Loan Report - $timeframe')),
+          pw.Paragraph(text: 'Total Loans: ${total.toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
+          pw.SizedBox(height: 20),
+          
+          pw.Text('Purpose Distribution', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 18)),
+          pw.SizedBox(height: 10),
+          _buildPdfLoanDistributionSection(loans),
+          
+          pw.SizedBox(height: 30),
+          pw.Divider(),
+
+          ...hierarchicalGroups.entries.expand((yearEntry) {
+            final year = yearEntry.key;
+            final months = yearEntry.value;
+            final yearTotal = months.values.expand((m) => m).fold(0.0, (sum, e) => sum + e.amount);
+
+            return [
+              pw.SizedBox(height: 20),
+              pw.Text('YEAR $year', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 22, color: PdfColors.orange900)),
+              pw.Text('Sub-total: ${yearTotal.toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+              pw.Divider(),
+              
+              ...months.entries.map((monthEntry) {
+                final monthName = monthEntry.key;
+                final monthLoans = monthEntry.value;
+                final monthTotal = monthLoans.fold(0.0, (sum, e) => sum + e.amount);
+
+                return pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.SizedBox(height: 15),
+                    pw.Text('$monthName $year', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
+                    pw.SizedBox(height: 8),
+                    pw.TableHelper.fromTextArray(
+                      headers: ['Date', 'Purpose', 'From', 'Duration', 'Amount', 'Method'],
+                      headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                      data: monthLoans.map((e) => [
+                        DateFormat('MMM dd').format(e.date),
+                        e.purpose,
+                        e.loanFrom,
+                        e.duration,
+                        e.amount.toStringAsFixed(2),
+                        e.receiveMethod,
+                      ]).toList(),
+                    ),
+                    pw.Align(
+                      alignment: pw.Alignment.centerRight,
+                      child: pw.Padding(
+                        padding: const pw.EdgeInsets.only(top: 8),
+                        child: pw.Text('Month Total: ${monthTotal.toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                );
+              }),
+            ];
+          }),
+        ],
+      ),
+    );
+
+    final directory = await getTemporaryDirectory();
+    final path = '${directory.path}/loans_export_$timeframe.pdf';
+    final file = File(path);
+    await file.writeAsBytes(await pdf.save());
+    await Share.shareXFiles([XFile(path, mimeType: 'application/pdf')], text: 'Loan Export ($timeframe)');
+  }
+
+  static pw.Widget _buildPdfLoanDistributionSection(List<Loan> loans) {
+    if (loans.isEmpty) return pw.SizedBox.shrink();
+    
+    final Map<String, double> purposeTotals = {};
+    for (var e in loans) {
+      purposeTotals[e.purpose] = (purposeTotals[e.purpose] ?? 0) + e.amount;
+    }
+    
+    final originalKeys = purposeTotals.keys.toList();
+    final sortedCats = purposeTotals.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final totalSpent = sortedCats.fold(0.0, (sum, e) => sum + e.value);
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(16),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.grey50,
+        borderRadius: pw.BorderRadius.circular(12),
+      ),
+      child: pw.Column(
+        children: [
+          if (totalSpent > 0)
+            pw.Container(
+              height: 20,
+              width: double.infinity,
+              decoration: pw.BoxDecoration(
+                borderRadius: pw.BorderRadius.circular(10),
+              ),
+              child: pw.Row(
+                children: sortedCats.map((cat) {
+                  final idx = originalKeys.indexOf(cat.key);
+                  final weight = cat.value / totalSpent;
+                  if (weight < 0.01) return pw.SizedBox.shrink();
+                  return pw.Expanded(
+                    flex: (weight * 1000).toInt(),
+                    child: pw.Container(color: _pdfPrimaries[idx % _pdfPrimaries.length]),
+                  );
+                }).toList(),
+              ),
+            ),
+          pw.SizedBox(height: 20),
+          pw.Column(
+            children: sortedCats.take(10).map((cat) {
+              final idx = originalKeys.indexOf(cat.key);
+              final perc = (cat.value / totalSpent * 100).toStringAsFixed(1);
+              return pw.Padding(
+                padding: const pw.EdgeInsets.only(bottom: 6),
+                child: pw.Row(
+                  children: [
+                    pw.Container(width: 8, height: 8, decoration: pw.BoxDecoration(color: _pdfPrimaries[idx % _pdfPrimaries.length], shape: pw.BoxShape.circle)),
+                    pw.SizedBox(width: 10),
+                    pw.Expanded(
+                      child: pw.Text('${cat.key}: $perc%', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                    ),
+                    pw.Text(cat.value.toStringAsFixed(2), style: const pw.TextStyle(fontSize: 10)),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
 }
+
 

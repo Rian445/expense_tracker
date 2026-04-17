@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'models/expense.dart';
 import 'models/earning.dart';
+import 'models/loan.dart';
 import 'screens/app_shell.dart';
 import 'core/constants/app_theme.dart';
 import 'providers/theme_provider.dart';
@@ -13,11 +14,14 @@ void main() async {
   await Hive.initFlutter();
   Hive.registerAdapter(ExpenseAdapter());
   Hive.registerAdapter(EarningAdapter());
+  Hive.registerAdapter(LoanAdapter());
   
   await Hive.openBox<Expense>('expensesBox');
   await Hive.openBox<Earning>('earningsBox');
+  await Hive.openBox<Loan>('loansBox');
   await Hive.openBox('settings');
   await Hive.openBox('categoriesBox');
+  await Hive.openBox('loanCategoriesBox');
   
   runApp(
     const ProviderScope(

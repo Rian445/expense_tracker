@@ -4,6 +4,7 @@ import '../providers/theme_provider.dart';
 import '../core/constants/app_theme.dart';
 import 'dashboard_screen.dart';
 import 'earning_screen.dart';
+import 'loan_screen.dart';
 import 'placeholder_screens.dart';
 
 class _BottomNavIndexNotifier extends Notifier<int> {

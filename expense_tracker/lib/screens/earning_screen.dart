@@ -292,60 +292,61 @@ class _BalanceCard extends ConsumerWidget {
                       bottomTitles: AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: true,
-                          getTitlesWidget: (value, meta) {
-                            if (timeframe == EarningAnalyticsTimeframe.yearly && timeframeTrend.keys.length > 2) {
-                              final keys = timeframeTrend.keys.toList();
-                              if (value.toInt() >= 0 && value.toInt() < keys.length) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(top: 8),
-                                  child: Text(keys[value.toInt()], style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 10)),
-                                );
-                              }
-                            } else {
-                              if (value.toInt() >= 0 && value.toInt() < timeframeTrend.entries.first.value.keys.length) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(top: 8),
-                                  child: Text(timeframeTrend.entries.first.value.keys.elementAt(value.toInt()), style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 10)),
-                                );
-                              }
+                          getTitlesWidget: (val, meta) {
+                            final labels = timeframeTrend.keys.toList();
+                            if (val >= 0 && val < labels.length) {
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: Text(labels[val.toInt()], style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 9, fontWeight: FontWeight.bold)),
+                              );
                             }
-                            return const SizedBox.shrink();
+                            return const Text('');
                           },
-                          reservedSize: 24,
                         ),
                       ),
                     ),
                     borderData: FlBorderData(show: false),
-                    barGroups: timeframe == EarningAnalyticsTimeframe.yearly
-                      ? timeframeTrend.entries.map((e) {
-                          final idx = timeframeTrend.keys.toList().indexOf(e.key);
-                          final totalForYear = e.value.values.fold(0.0, (s, amt) => s + amt);
-                          return BarChartGroupData(
-                            x: idx,
-                            barRods: [
-                              BarChartRodData(
-                                toY: totalForYear,
-                                color: Colors.white,
-                                width: 24,
-                                borderRadius: BorderRadius.circular(4),
-                              )
-                            ],
-                          );
-                        }).toList()
-                      : timeframeTrend.entries.first.value.entries.map((e) {
-                          final idx = timeframeTrend.entries.first.value.keys.toList().indexOf(e.key);
-                          return BarChartGroupData(
-                            x: idx,
-                            barRods: [
-                              BarChartRodData(
-                                toY: e.value,
-                                color: Colors.white.withValues(alpha: e.value > 0 ? 1 : 0.3),
-                                width: timeframe == EarningAnalyticsTimeframe.weekly ? 16 : 8,
-                                borderRadius: BorderRadius.circular(4),
-                              )
-                            ],
-                          );
-                        }).toList(),
+                    barGroups: timeframeTrend.entries.map((outerEntry) {
+                      final outerIndex = timeframeTrend.keys.toList().indexOf(outerEntry.key);
+                      final innerData = outerEntry.value;
+                      final outerTotal = innerData.values.fold(0.0, (sum, val) => sum + val);
+                      
+                      // Find global max to highlight the peak earning point
+                      final allItems = timeframeTrend.values.expand((m) => m.values).toList();
+                      final globalMax = allItems.isEmpty ? 0.0 : allItems.reduce((a, b) => a > b ? a : b);
+                      
+                      return BarChartGroupData(
+                        x: outerIndex,
+                        barsSpace: timeframe == EarningAnalyticsTimeframe.yearly ? 2 : (timeframe == EarningAnalyticsTimeframe.weekly ? 0 : 4),
+                        barRods: [
+                          // Big Bar for the Group (Only for Month/Year)
+                          if (timeframe != EarningAnalyticsTimeframe.weekly)
+                            BarChartRodData(
+                              toY: outerTotal == 0 ? 5.0 : outerTotal,
+                              color: Colors.white.withValues(alpha: 0.2),
+                              width: timeframe == EarningAnalyticsTimeframe.yearly ? 12 : 14,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          // Small Bars with Adjusted Width
+                          ...innerData.entries.map((entry) {
+                            final val = entry.value;
+                            final isPeak = val > 0 && val == globalMax;
+                            
+                            return BarChartRodData(
+                              toY: val == 0 ? 2.0 : val,
+                              color: isPeak 
+                                  ? Colors.amberAccent 
+                                  : Colors.white.withValues(alpha: val == 0 ? 0.05 : 0.4),
+                              // Much wider bars for Weekly view
+                              width: timeframe == EarningAnalyticsTimeframe.weekly 
+                                  ? 18.0 
+                                  : (timeframe == EarningAnalyticsTimeframe.yearly ? 1.5 : 2.5),
+                              borderRadius: BorderRadius.circular(timeframe == EarningAnalyticsTimeframe.weekly ? 4 : 1),
+                            );
+                          }),
+                        ],
+                      );
+                    }).toList(),
                   ),
                 ),
               ),

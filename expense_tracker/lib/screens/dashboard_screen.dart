@@ -558,8 +558,6 @@ class _SectionHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selectedTimeframe = ref.watch(analyticsTimeframeProvider);
-
     final isDarkMode = ref.watch(themeModeProvider) == ThemeMode.dark;
 
     return Column(
@@ -576,81 +574,6 @@ class _SectionHeader extends ConsumerWidget {
               const Text('See all', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
           ],
         ),
-        if (title == 'Analytics') ...[
-          const SizedBox(height: 16),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final width = constraints.maxWidth;
-              final tabWidth = width / 3;
-              final activeIndex = AnalyticsTimeframe.values.indexOf(selectedTimeframe);
-
-              return Container(
-                height: 48,
-                decoration: BoxDecoration(
-                  color: isDarkMode ? const Color(0xFF334155) : AppColors.background,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Stack(
-                  children: [
-                    // Sliding Indicator
-                    AnimatedPositioned(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOutBack,
-                      left: activeIndex * tabWidth + 4,
-                      top: 4,
-                      bottom: 4,
-                      width: tabWidth - 8,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            )
-                          ],
-                        ),
-                      ),
-                    ),
-                    // Tab Labels
-                    Row(
-                      children: AnalyticsTimeframe.values.map((timeframe) {
-                        final isSelected = selectedTimeframe == timeframe;
-                        String label;
-                        switch (timeframe) {
-                          case AnalyticsTimeframe.weekly: label = 'This Week'; break;
-                          case AnalyticsTimeframe.monthly: label = 'This Month'; break;
-                          case AnalyticsTimeframe.yearly: label = 'This Year'; break;
-                        }
-
-                        return Expanded(
-                          child: GestureDetector(
-                            onTap: () => ref.read(analyticsTimeframeProvider.notifier).set(timeframe),
-                            child: Container(
-                              color: Colors.transparent,
-                              alignment: Alignment.center,
-                              child: AnimatedDefaultTextStyle(
-                                duration: const Duration(milliseconds: 200),
-                                style: TextStyle(
-                                  color: isSelected ? Colors.white : (isDarkMode ? Colors.white.withValues(alpha: 0.7) : AppColors.textSecondary),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                                child: Text(label),
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
       ],
     );
   }

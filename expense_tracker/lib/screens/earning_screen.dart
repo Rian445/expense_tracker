@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../providers/earning_analytics_provider.dart';
+import '../providers/earning_provider.dart';
 import '../providers/theme_provider.dart';
 import '../providers/settings_provider.dart';
 import '../core/constants/app_theme.dart';
 import '../models/earning.dart';
 import 'add_earning_screen.dart';
+import '../services/export_service.dart';
 
 class EarningScreen extends ConsumerWidget {
   const EarningScreen({super.key});
@@ -99,6 +101,10 @@ class EarningScreen extends ConsumerWidget {
                 ),
                 onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
               ),
+              IconButton(
+                icon: Icon(Icons.share_outlined, color: Theme.of(context).textTheme.titleLarge?.color),
+                onPressed: () => _showExportOptions(context, ref),
+              ),
             ],
           ),
           SliverToBoxAdapter(
@@ -143,6 +149,186 @@ class EarningScreen extends ConsumerWidget {
         backgroundColor: Colors.green.shade600,
         foregroundColor: Colors.white,
         elevation: 4,
+      ),
+    );
+  }
+
+  void _showExportOptions(BuildContext context, WidgetRef ref) {
+    final timeframe = ref.read(earningAnalyticsTimeframeProvider);
+    final allEarnings = ref.read(earningProvider);
+    
+    if (timeframe == EarningAnalyticsTimeframe.yearly) {
+      // Step 1: Select Year
+      final years = allEarnings.map((e) => e.date.year).toSet().toList()..sort((a, b) => b.compareTo(a));
+      
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        builder: (context) {
+          return Container(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Select Year', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.titleLarge?.color)),
+                const SizedBox(height: 20),
+                Expanded(
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: [
+                      _StepTile(
+                        label: 'All Years so far',
+                        onTap: () {
+                          Navigator.pop(context);
+                          _showFormatOptions(context, allEarnings, 'All_Time');
+                        },
+                      ),
+                      ...years.map((year) => _StepTile(
+                        label: year.toString(),
+                        onTap: () {
+                          Navigator.pop(context);
+                          final filtered = allEarnings.where((e) => e.date.year == year).toList();
+                          _showFormatOptions(context, filtered, year.toString());
+                        },
+                      )),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          );
+        },
+      );
+    } else {
+      // Direct to Format Selection for Weekly/Monthly
+      final earnings = ref.read(filteredEarningsProvider);
+      _showFormatOptions(context, earnings, timeframe.name);
+    }
+  }
+
+  void _showFormatOptions(BuildContext context, List<Earning> earnings, String label) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Export - $label', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.titleLarge?.color)),
+              const SizedBox(height: 24),
+              _ExportTile(
+                icon: Icons.table_chart_outlined,
+                label: 'Export to CSV',
+                color: Colors.green,
+                onTap: () async {
+                  Navigator.pop(context);
+                  _runExport(context, () => ExportService.exportEarningsCSV(earnings, label), 'CSV');
+                },
+              ),
+              _ExportTile(
+                icon: Icons.grid_on_outlined,
+                label: 'Export to Excel',
+                color: Colors.blue,
+                onTap: () async {
+                  Navigator.pop(context);
+                  _runExport(context, () => ExportService.exportEarningsExcel(earnings, label), 'Excel');
+                },
+              ),
+              _ExportTile(
+                icon: Icons.picture_as_pdf_outlined,
+                label: 'Export to PDF',
+                color: Colors.red,
+                onTap: () async {
+                  Navigator.pop(context);
+                  _runExport(context, () => ExportService.exportEarningsPDF(earnings, label), 'PDF');
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _runExport(BuildContext context, Future Function() exportFn, String format) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+            const SizedBox(width: 16),
+            Text('Generating $format report...'),
+          ],
+        ),
+        duration: const Duration(seconds: 10),
+      ),
+    );
+
+    try {
+      await exportFn();
+      if (context.mounted) ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+    }
+  }
+}
+
+class _StepTile extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+
+  const _StepTile({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        onTap: onTap,
+        title: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+        trailing: const Icon(Icons.chevron_right),
+        tileColor: Colors.green.shade600.withValues(alpha: 0.05),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+}
+
+class _ExportTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ExportTile({required this.icon, required this.label, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        onTap: onTap,
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color),
+        ),
+        title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
+        ),
       ),
     );
   }

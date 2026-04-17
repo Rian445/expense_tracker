@@ -22,6 +22,12 @@ class Expense {
   @HiveField(5)
   DateTime date;
 
+  @HiveField(6)
+  bool isAuto;
+
+  @HiveField(7)
+  String? source;
+
   Expense({
     required this.id,
     required this.category,
@@ -29,6 +35,8 @@ class Expense {
     required this.amount,
     required this.paymentMethod,
     required this.date,
+    this.isAuto = false,
+    this.source,
   });
 
   Map<String, dynamic> toMap() {
@@ -39,6 +47,8 @@ class Expense {
       'amount': amount,
       'paymentMethod': paymentMethod,
       'date': date.millisecondsSinceEpoch,
+      'isAuto': isAuto,
+      'source': source,
     };
   }
 
@@ -50,6 +60,8 @@ class Expense {
       amount: (map['amount'] as num).toDouble(),
       paymentMethod: map['paymentMethod'],
       date: DateTime.fromMillisecondsSinceEpoch(map['date']),
+      isAuto: map['isAuto'] ?? false,
+      source: map['source'],
     );
   }
 }

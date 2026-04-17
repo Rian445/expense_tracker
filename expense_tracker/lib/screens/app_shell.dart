@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/theme_provider.dart';
+import '../providers/settings_provider.dart';
 import '../core/constants/app_theme.dart';
+import '../core/services/sms_service.dart';
 import 'dashboard_screen.dart';
 import 'earning_screen.dart';
 import 'loan_screen.dart';
@@ -18,13 +20,31 @@ final _bottomNavIndexProvider = NotifierProvider<_BottomNavIndexNotifier, int>((
   return _BottomNavIndexNotifier();
 });
 
-class AppShell extends ConsumerWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<AppShell> {
+  @override
+  void initState() {
+    super.initState();
+    // Auto-start SMS service if user had previously enabled it
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final isEnabled = ref.read(smsAutoTrackingProvider);
+      if (isEnabled) {
+        SmsService.enable(ref);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final currentIndex = ref.watch(_bottomNavIndexProvider);
     final isDarkMode = ref.watch(themeModeProvider) == ThemeMode.dark;
+
 
     final pages = const [
       DashboardScreen(),

@@ -14,6 +14,12 @@ class ExpenseNotifier extends Notifier<List<Expense>> {
     box.add(expense);
     state = [...state, expense];
   }
+
+  /// Re-syncs state from Hive (used by background SMS writer).
+  void refresh() {
+    final box = Hive.box<Expense>('expensesBox');
+    state = box.values.toList();
+  }
 }
 
 final expenseProvider = NotifierProvider<ExpenseNotifier, List<Expense>>(() {

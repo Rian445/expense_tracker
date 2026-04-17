@@ -14,6 +14,11 @@ class EarningNotifier extends Notifier<List<Earning>> {
     box.add(earning);
     state = [...state, earning];
   }
+
+  void refresh() {
+    final box = Hive.box<Earning>('earningsBox');
+    state = box.values.toList();
+  }
 }
 
 final earningProvider = NotifierProvider<EarningNotifier, List<Earning>>(() {

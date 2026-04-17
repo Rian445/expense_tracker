@@ -27,3 +27,27 @@ class CurrencyNotifier extends Notifier<Currency> {
     Hive.box('settings').put('currency', currency.code);
   }
 }
+
+// ─── SMS Auto-Tracking ────────────────────────────────────────────────────────
+
+final smsAutoTrackingProvider =
+    NotifierProvider<SmsAutoTrackingNotifier, bool>(SmsAutoTrackingNotifier.new);
+
+class SmsAutoTrackingNotifier extends Notifier<bool> {
+  @override
+  bool build() {
+    return Hive.box('settings').get('smsAutoTracking', defaultValue: false) as bool;
+  }
+
+  void toggle() {
+    final newVal = !state;
+    state = newVal;
+    Hive.box('settings').put('smsAutoTracking', newVal);
+  }
+
+  void set(bool value) {
+    state = value;
+    Hive.box('settings').put('smsAutoTracking', value);
+  }
+}
+

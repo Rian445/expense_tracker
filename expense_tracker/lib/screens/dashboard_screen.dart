@@ -6,7 +6,7 @@ import '../providers/theme_provider.dart';
 import '../core/constants/app_theme.dart';
 import '../models/expense.dart';
 import 'add_expense_screen.dart';
-
+import 'sms_settings_screen.dart';
 import '../providers/settings_provider.dart';
 import '../services/export_service.dart';
 import '../providers/expense_provider.dart';
@@ -119,6 +119,18 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ),
             const Divider(height: 32, indent: 20, endIndent: 20),
+            _DrawerItem(
+              icon: Icons.sms_rounded,
+              label: 'SMS Auto Tracking',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SmsSettingsScreen()),
+                );
+              },
+            ),
+            const Divider(height: 32, indent: 20, endIndent: 20),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
               child: Text('Currency', style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.bold)),
@@ -226,6 +238,7 @@ class DashboardScreen extends ConsumerWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: null,
         onPressed: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const AddExpenseScreen()),
@@ -916,11 +929,38 @@ class _ActivitySummaryTileState extends ConsumerState<_ActivitySummaryTile> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(item.category, style: TextStyle(
-                                      fontSize: 13, 
-                                      fontWeight: FontWeight.bold,
-                                      color: isDarkMode ? Colors.white : AppColors.textPrimary,
-                                    )),
+                                    Row(
+                                      children: [
+                                        Text(item.category, style: TextStyle(
+                                          fontSize: 13, 
+                                          fontWeight: FontWeight.bold,
+                                          color: isDarkMode ? Colors.white : AppColors.textPrimary,
+                                        )),
+                                        if (item.isAuto) ...[
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.primary.withValues(alpha: 0.12),
+                                              borderRadius: BorderRadius.circular(6),
+                                              border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.sms_rounded, size: 8, color: AppColors.primary),
+                                                const SizedBox(width: 3),
+                                                Text('Auto', style: TextStyle(
+                                                  fontSize: 8,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppColors.primary,
+                                                )),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
                                     if (item.subCategory != null)
                                       Text(item.subCategory!, style: TextStyle(
                                         fontSize: 11, 
